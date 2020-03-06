@@ -129,7 +129,14 @@ object CS143Utils {
     */
   def getUdfFromExpressions(expressions: Seq[Expression]): ScalaUdf = {
     /* IMPLEMENT THIS METHOD */
-    null
+    /* Referenced Piazza @265 */
+    var res: ScalaUdf = null
+    for (ex <- expressions){
+      if (ex.isInstanceOf[ScalaUdf]) {
+        res = ex.asInstanceOf[ScalaUdf]
+      }
+    }
+    res
   }
 
   /**
@@ -225,12 +232,22 @@ object CachingIteratorGenerator {
 
       def hasNext() = {
         /* IMPLEMENT THIS METHOD */
-        false
+        input.hasNext
       }
 
       def next() = {
         /* IMPLEMENT THIS METHOD */
-        null
+        if (input.hasNext){
+          val row = input.next()
+          val key = cacheKeyProjection(row)
+          if (!cache.containsKey(key)){
+            cache.put(key, udfProject(row))
+          }
+          Row.fromSeq(preUdfProjection(row) ++ cache.get(key) ++ postUdfProjection(row))
+        }
+        else {
+          null
+        }
       }
     }
   }
@@ -253,12 +270,18 @@ object AggregateIteratorGenerator {
 
       def hasNext() = {
         /* IMPLEMENT THIS METHOD */
-        false
+        input.hasNext
       }
 
       def next() = {
         /* IMPLEMENT THIS METHOD */
-        null
+        /* input holds aggr values to form output row */
+        val row = input.next()
+        val groupData = row._1
+        val inputSch = row._2
+        val temp = new GenericMutableRow(1)
+        temp(0) = inputSch.eval()
+        postAggregateProjection(new JoinedRow(temp, groupData))
       }
     }
   }
